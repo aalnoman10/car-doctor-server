@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.ENV_PORT || 5000;
@@ -7,7 +8,6 @@ const app = express()
 
 app.use(cors())
 app.use(express.json())
-
 
 const uri = `mongodb+srv://${process.env.ENV_NAME}:${process.env.ENV_PASS}@cluster0.hrkpt8c.mongodb.net/?retryWrites=true&w=majority`;
 // const uriN = `mongodb+srv://${process.env.ENV_NAME}:${process.env.ENV_PASS}@cluster0.hrkpt8c.mongodb.net/?retryWrites=true&w=majority`;
@@ -23,11 +23,12 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const serviceCollection = client.db('carDoctor').collection('services')
         const bookingCollection = client.db('carDoctor').collection('bookings')
 
+        // servicesCollection
         app.get('/services', async (req, res) => {
             const finding = serviceCollection.find()
             const result = await finding.toArray()

@@ -10,7 +10,6 @@ app.use(cors())
 app.use(express.json())
 
 const uri = `mongodb+srv://${process.env.ENV_NAME}:${process.env.ENV_PASS}@cluster0.hrkpt8c.mongodb.net/?retryWrites=true&w=majority`;
-// const uriN = `mongodb+srv://${process.env.ENV_NAME}:${process.env.ENV_PASS}@cluster0.hrkpt8c.mongodb.net/?retryWrites=true&w=majority`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
@@ -20,6 +19,26 @@ const client = new MongoClient(uri, {
     }
 });
 
+const verifyUser = (req, res, next) => {
+
+    const authorization = req.headers.authorization
+
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'un au access' })
+    }
+
+    const token = authorization.split(' ')[1]
+    console.log(token);
+
+    jwt.verify(token, process.env.Access_Token, (error, decode) => {
+        if (error) {
+            return res.status(403).send({ error: true, message: 'invalid token' })
+        }
+        req.decode = decode
+        next()
+    })
+}
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -27,6 +46,19 @@ async function run() {
 
         const serviceCollection = client.db('carDoctor').collection('services')
         const bookingCollection = client.db('carDoctor').collection('bookings')
+
+        // jwt 
+        app.post('/jwt', (req, res) => {
+            const user = req.body
+            console.log(user);
+
+            const token = jwt.sign(user, process.env.Access_Token, {
+                expiresIn: '1h'
+            });
+
+            const userToken = { token }
+            res.send(userToken)
+        })
 
         // servicesCollection
         app.get('/services', async (req, res) => {
@@ -56,8 +88,13 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/bookings', async (req, res) => {
+        app.get('/bookings', verifyUser, async (req, res) => {
             const email = req?.query?.email
+
+            if (req.decode.email !== email) {
+                return res.status(403).send({ error: true, message: 'forbidden access' })
+            }
+
             let query = {}
             if (email) {
                 query = { email };
